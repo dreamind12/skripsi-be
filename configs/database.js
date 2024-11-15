@@ -1,6 +1,6 @@
 const Sequalize = require('sequelize');
 
-const db = new Sequalize('root','','midtrans',{
+const db = new Sequalize('midtrans','root','',{
 host: 'localhost',
 dialect: 'mysql',
 });

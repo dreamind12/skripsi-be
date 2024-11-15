@@ -1,5 +1,5 @@
 const Sequelize = require("sequelize");
-const db = require('../config/database');
+const db = require('../configs/database');
 
 const Product = db.define("Product", {
   name: {
@@ -19,11 +19,15 @@ const Product = db.define("Product", {
     allowNull: false,
   },
   created_at: {
-    type: Sequelize.DATETIME,
+    type: Sequelize.DATE,
     defaultValue: Sequelize.NOW
   },
   updated_at: {
-    type: Sequelize.DATETIME,
+    type: Sequelize.DATE,
+    allowNull: true,
+  },
+  deleted_at: {
+    type: Sequelize.DATE,
     allowNull: true,
   }
 },
@@ -33,12 +37,6 @@ const Product = db.define("Product", {
 
 module.exports = Product;
 
-(async () => {
-  await db.sync()
-})
-
-// Product.sync().then((data)=>{
-// console.log("Table success create");
-// }).catch((err)=>{
-//   console.log("Table Error when create")
-// });
+// (async () => {
+//   await db.sync()
+// })
