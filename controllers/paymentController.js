@@ -1,8 +1,15 @@
+const midtransClient = require('midtrans-client');
 const asyncHandler = require('express-async-handler');
 const Product = require('../models/productModel');
 const Cart = require('../models/cartModel');
 const Image = require('../models/imageModel');
 const { Sequelize } = require('sequelize');
+
+const snap = new midtransClient.Snap({
+    isProduction: false, // Set to true for production
+    serverKey: 'SB-Mid-server-pbbyOH2stLH-O3I5OFLpSYqf',
+    clientKey: 'SB-Mid-client-elUlswgTJmEwELW-',
+  });
 
 const addToCart = asyncHandler(async (req, res) => {
     try {
@@ -147,9 +154,82 @@ const deleteCart = asyncHandler(async (req, res) => {
     }
 });
 
+const createTransaction = asyncHandler(async (req, res) => {
+    try {
+      // Fetch cart items for the user
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const cartItems = await Cart.findAll({
+        include: [
+          {
+            model: Product,
+            attributes: ['id', 'name', 'price'],
+            include: [
+              {
+                model: Image,
+                attributes: ['url'],
+              },
+            ],
+          },
+        ],
+      });
+  
+      if (!cartItems || cartItems.length === 0) {
+        res.status(400);
+        throw new Error('Keranjang kosong. Tidak ada item untuk diproses.');
+      }
+  
+      // Prepare transaction details
+      const transactionDetails = {
+        order_id: `ORDER-${Date.now()}`, // Generate unique order ID
+        gross_amount: cartItems.reduce(
+          (total, item) => total + item.Product.price * item.quantity,
+          0
+        ),
+      };
+  
+      // Prepare item details for Midtrans
+      const itemDetails = cartItems.map((item) => ({
+        id: item.product_id,
+        price: item.Product.price,
+        quantity: item.quantity,
+        name: item.Product.name.slice(0, 50),
+      }));
+  
+      // Prepare customer details (this is an example, customize as needed)
+      const customerDetails = {
+        first_name: req.body.first_name || 'Faris',
+        last_name: req.body.last_name || '',
+        email: req.body.email || 'farraya07@gmail.com',
+        phone: req.body.phone || '081931554095',
+      };
+  
+      // Snap API parameters
+      const parameter = {
+        transaction_details: transactionDetails,
+        item_details: itemDetails,
+        customer_details: customerDetails,
+      };
+  
+      // Create transaction in Midtrans
+      const transaction = await snap.createTransaction(parameter);
+  
+      // Send response to client
+      res.status(201).json({
+        message: 'Transaksi berhasil dibuat',
+        transactionToken: transaction.token,
+        redirectUrl: transaction.redirect_url,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message || 'Terjadi kesalahan saat membuat transaksi.',
+      });
+    }
+  });
+
 module.exports = {
     addToCart,
     updateCart,
     getAllCart,
     deleteCart,
+    createTransaction,
 }

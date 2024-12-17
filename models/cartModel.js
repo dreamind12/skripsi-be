@@ -15,7 +15,11 @@ const Cart = db.define("Cart", {
     quantity: {
       type: Sequelize.INTEGER,
       allowNull: true,
-  },
+    },
+    status: {
+    type: Sequelize.STRING,
+    defaultValue: "Unpaid",
+    },
     created_at: {
         type: Sequelize.DATE,
         allowNull: false,
