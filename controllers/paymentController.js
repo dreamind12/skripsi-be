@@ -159,6 +159,7 @@ const createTransaction = asyncHandler(async (req, res) => {
       // Fetch cart items for the user
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       const cartItems = await Cart.findAll({
+        where: { status: 'Unpaid' }, // Hanya ambil cart dengan status Unpaid
         include: [
           {
             model: Product,
@@ -175,32 +176,35 @@ const createTransaction = asyncHandler(async (req, res) => {
   
       if (!cartItems || cartItems.length === 0) {
         res.status(400);
-        throw new Error('Keranjang kosong. Tidak ada item untuk diproses.');
+        throw new Error('Keranjang kosong atau semua item sudah dibayar.');
       }
   
-      // Prepare transaction details
-      const transactionDetails = {
-        order_id: `ORDER-${Date.now()}`, // Generate unique order ID
-        gross_amount: cartItems.reduce(
-          (total, item) => total + item.Product.price * item.quantity,
-          0
-        ),
-      };
-  
-      // Prepare item details for Midtrans
+      // Prepare item details
       const itemDetails = cartItems.map((item) => ({
         id: item.product_id,
         price: item.Product.price,
         quantity: item.quantity,
-        name: item.Product.name.slice(0, 50),
+        name: item.Product.name.slice(0, 50), // Batasi panjang nama
       }));
   
-      // Prepare customer details (this is an example, customize as needed)
+      // Calculate gross_amount
+      const grossAmount = itemDetails.reduce(
+        (total, item) => total + item.price * item.quantity,
+        0
+      );
+  
+      // Prepare transaction details
+      const transactionDetails = {
+        order_id: `ORDER-${Date.now()}`,
+        gross_amount: grossAmount,
+      };
+  
+      // Prepare customer details
       const customerDetails = {
-        first_name: req.body.first_name || 'Faris',
+        first_name: req.body.first_name || 'Customer',
         last_name: req.body.last_name || '',
-        email: req.body.email || 'farraya07@gmail.com',
-        phone: req.body.phone || '081931554095',
+        email: req.body.email || 'customer@example.com',
+        phone: req.body.phone || '08123456789',
       };
   
       // Snap API parameters
@@ -213,11 +217,33 @@ const createTransaction = asyncHandler(async (req, res) => {
       // Create transaction in Midtrans
       const transaction = await snap.createTransaction(parameter);
   
-      // Send response to client
+      // Send initial response to client with payment URL
       res.status(201).json({
         message: 'Transaksi berhasil dibuat',
         transactionToken: transaction.token,
         redirectUrl: transaction.redirect_url,
+      });
+  
+      // Simulate callback from Midtrans
+      snap.transaction.notification(transaction.token).then(async (midtransStatus) => {
+        if (midtransStatus.transaction_status === 'settlement') {
+          // Update Cart status to Paid
+          const cartIDs = cartItems.map((item) => item.id);
+          await Cart.update(
+            { status: 'Paid' },
+            { where: { id: cartIDs } }
+          );
+  
+          // Create Invoice entry
+          await Invoice.create({
+            customer: `${customerDetails.first_name} ${customerDetails.last_name}`,
+            cartID: JSON.stringify(cartIDs), // Simpan sebagai array JSON
+            quantity: cartItems.reduce((total, item) => total + item.quantity, 0),
+            status: 'Paid',
+          });
+  
+          console.log('Transaksi berhasil, status cart diperbarui, dan invoice dibuat.');
+        }
       });
     } catch (error) {
       res.status(500).json({
@@ -225,6 +251,7 @@ const createTransaction = asyncHandler(async (req, res) => {
       });
     }
   });
+  
 
 module.exports = {
     addToCart,

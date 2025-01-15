@@ -7,6 +7,7 @@ const PORT = 8000;
 const bodyParser = require('body-parser');
 const productRouter = require('./routes/productRoute');
 const paymentRouter = require('./routes/paymentRoute');
+const userRouter = require('./routes/userRoute');
 
 const app = express();
 const corsOptions = {
@@ -25,6 +26,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 
 app.use('/product', productRouter);
 app.use('/payment', paymentRouter);
+app.use('/user', userRouter);
 
 app.listen(process.env.PORT || PORT, ()=>{
     console.log(`Server Listening on ${PORT}`);
