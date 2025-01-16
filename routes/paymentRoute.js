@@ -1,11 +1,12 @@
 const express = require('express');
 const { addToCart, getAllCart, updateCart, deleteCart, createTransaction } = require('../controllers/paymentController');
+const { authMiddleware } = require('../middlewares/authMiddleware');
 const router = express.Router();
 
-router.post('/addToCart', addToCart);
-router.post('/createTransaction', createTransaction);
-router.put('/updateCart/:id', updateCart);
-router.get('/getAllCart', getAllCart);
-router.delete('/deleteCart/:id', deleteCart);
+router.post('/addToCart', authMiddleware, addToCart);
+router.post('/createTransaction', authMiddleware, createTransaction);
+router.put('/updateCart/:id', authMiddleware, updateCart);
+router.get('/getAllCart', authMiddleware, getAllCart);
+router.delete('/deleteCart/:id', authMiddleware, deleteCart);
 
 module.exports = router;

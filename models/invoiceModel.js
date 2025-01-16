@@ -8,12 +8,12 @@ const Invoice = db.define("Invoice", {
         primaryKey: true,
         autoIncrement: true,
     },
-    customer: {
-        type: Sequelize.STRING,
+    user_id: {
+        type: Sequelize.INTEGER,
         allowNull: true,
     },
-    cartID: {
-        type: Sequelize.INTEGER,
+    cart_id: {
+        type: Sequelize.TEXT,
         allowNull: true,
     },    
     quantity: {

@@ -1,6 +1,7 @@
 const Sequelize = require("sequelize");
 const db = require('../configs/database');
 const Product = require('./productModel');
+const User = require('./userModel');
 
 const Cart = db.define("Cart", {
     id: {
@@ -12,6 +13,10 @@ const Cart = db.define("Cart", {
         type: Sequelize.INTEGER,
         allowNull: true,
     },
+    user_id: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+  },
     quantity: {
       type: Sequelize.INTEGER,
       allowNull: true,
@@ -30,7 +35,9 @@ const Cart = db.define("Cart", {
   });
 
 Product.hasMany(Cart, { foreignKey: 'product_id'});
+User.hasMany(Cart, { foreignKey: 'user_id' });
 Cart.belongsTo(Product, { foreignKey: 'product_id' });
+Cart.belongsTo(User, { foreignKey: 'user_id' });
 
 module.exports = Cart;
 
