@@ -233,32 +233,12 @@ const createTransaction = asyncHandler(async (req, res) => {
       transactionToken: transaction.token,
       redirectUrl: transaction.redirect_url,
     });
-
-    // Simulasikan callback dari Midtrans
-    snap.transaction.notification(transaction.token).then(async (midtransStatus) => {
-      if (midtransStatus.transaction_status === 'settlement') {
-        // Update status Cart menjadi Paid
-        const cartIDs = cartItems.map((item) => item.id);
-        await Cart.update({ status: 'Paid' }, { where: { id: cartIDs } });
-
-        // Buat Invoice
-        await Invoice.create({
-          customer: `${customerDetails.first_name} ${customerDetails.last_name}`,
-          cartID: JSON.stringify(cartIDs), // Simpan sebagai array JSON
-          quantity: cartItems.reduce((total, item) => total + item.quantity, 0),
-          status: 'Paid',
-        });
-
-        console.log('Transaksi berhasil, status cart diperbarui, dan invoice dibuat.');
-      }
-    });
   } catch (error) {
     res.status(500).json({
       message: error.message || 'Terjadi kesalahan saat membuat transaksi.',
     });
   }
 });
-
 
 
 module.exports = {

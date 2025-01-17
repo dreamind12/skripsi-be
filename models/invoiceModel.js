@@ -32,8 +32,8 @@ const Invoice = db.define("Invoice", {
     freezeTableName: true,
   });
 
-Cart.hasMany(Invoice, { foreignKey: 'cartID'});
-Invoice.belongsTo(Cart, { foreignKey: 'cartID' });
+Cart.hasMany(Invoice, { foreignKey: 'cart_id'});
+Invoice.belongsTo(Cart, { foreignKey: 'cart_id' });
 
 module.exports = Invoice;
 
@@ -41,8 +41,8 @@ module.exports = Invoice;
 //     await db.sync()
 //   })
   
-  Invoice.sync().then((data)=>{
-  console.log("Table cart success create");
-  }).catch((err)=>{
-    console.log("Table Error when create")
-  });
+  // Invoice.sync().then((data)=>{
+  // console.log("Table cart success create");
+  // }).catch((err)=>{
+  //   console.log("Table Error when create")
+  // });
