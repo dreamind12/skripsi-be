@@ -5,6 +5,7 @@ const Cart = require('../models/cartModel');
 const Image = require('../models/imageModel');
 const Invoice = require('../models/invoiceModel');
 const { Sequelize } = require('sequelize');
+const axios = require('axios'); // Pastikan Anda menginstal axios untuk HTTP request.
 
 const snap = new midtransClient.Snap({
   isProduction: false, // Set to true for production
@@ -205,40 +206,57 @@ const createTransaction = asyncHandler(async (req, res) => {
 
     // Siapkan customerDetails dari req.user
     const user = req.user;
+    const firstName = user.username.split(' ')[0] || 'Customer';
+    const lastName = user.username.split(' ')[1] || 'Unknown';
+    const phone = user.mobile && user.mobile.length >= 5 && user.mobile.length <= 20
+      ? user.mobile
+      : '081234567890'; // Default phone jika tidak valid
+
     const customerDetails = {
-      first_name: user.username.split(' ')[0] || 'Customer',
-      last_name: user.username.split(' ')[1] || '',
+      first_name: firstName,
+      last_name: lastName,
       email: user.email,
-      phone: user.mobile,
+      phone: phone,
     };
 
-    // Parameter untuk Snap API
-    const transactionDetails = {
-      order_id: `ORDER-${Date.now()}`,
-      gross_amount: grossAmount,
-    };
-
-    const parameter = {
-      transaction_details: transactionDetails,
+    // Parameter untuk Payment Link
+    const paymentLinkPayload = {
+      transaction_details: {
+        order_id: `ORDER-${Date.now()}`,
+        gross_amount: grossAmount,
+      },
       item_details: itemDetails,
       customer_details: customerDetails,
+      enabled_payments: ['gopay', 'bank_transfer', 'credit_card'], // Metode pembayaran yang diizinkan
+      description: 'Transaksi melalui Payment Link Midtrans',
     };
 
-    // Buat transaksi di Midtrans
-    const transaction = await snap.createTransaction(parameter);
+    // Buat Payment Link via API Midtrans
+    const serverKey = 'SB-Mid-server-pbbyOH2stLH-O3I5OFLpSYqf'; // Ganti dengan server key Anda
+    const midtransResponse = await axios.post(
+      'https://api.sandbox.midtrans.com/v1/payment-links',
+      paymentLinkPayload,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(serverKey).toString('base64')}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
     // Kirim response ke client
     res.status(201).json({
-      message: 'Transaksi berhasil dibuat',
-      transactionToken: transaction.token,
-      redirectUrl: transaction.redirect_url,
+      message: 'Payment Link berhasil dibuat',
+      paymentLink: midtransResponse.data.payment_url, // URL Payment Link
     });
   } catch (error) {
     res.status(500).json({
-      message: error.message || 'Terjadi kesalahan saat membuat transaksi.',
+      message: error.response?.data?.error_messages || error.message || 'Terjadi kesalahan saat membuat Payment Link.',
     });
   }
 });
+
+
 
 
 module.exports = {
