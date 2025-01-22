@@ -256,8 +256,136 @@ const createTransaction = asyncHandler(async (req, res) => {
   }
 });
 
+const createInvoice = asyncHandler(async (req, res) => {
+  try {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    // Step 1: Ambil semua item dalam keranjang
+    const cartItems = await Cart.findAll({
+      where: { user_id: req.user.id, status: 'Unpaid' },
+      include: [
+        {
+          model: Product,
+          attributes: ['id', 'name', 'price'],
+          include: [
+            {
+              model: Image,
+              attributes: ['url'],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!cartItems || cartItems.length === 0) {
+      res.status(400);
+      throw new Error('Keranjang kosong atau semua item sudah dibayar.');
+    }
+
+    // Step 2: Siapkan item details dan hitung total harga
+    const itemDetails = cartItems.map((item) => ({
+      id: `SKU${item.product_id}`,
+      price: item.Product.price,
+      quantity: item.quantity,
+      description: item.Product.name.slice(0, 50),
+      name: item.Product.name.slice(0, 50),
+    }));
+
+    const grossAmount = itemDetails.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+
+    // Step 3: Siapkan data customer
+    const user = req.user;
+    const customerDetails = {
+      first_name: user.username.split(' ')[0] || 'Customer',
+      last_name: user.username.split(' ')[1] || '',
+      email: user.email,
+      phone: user.mobile || '123456789',
+    };
+
+    // Step 4: Siapkan parameter untuk Snap
+    const transactionDetails = {
+      order_id: `ORDER-${Date.now()}`,
+      gross_amount: grossAmount,
+    };
+
+    const parameter = {
+      transaction_details: transactionDetails,
+      item_details: itemDetails,
+      customer_details: customerDetails,
+      enabled_payments: ['gopay', 'credit_card', 'bank_transfer'],
+    };
+
+    // Step 5: Buat transaksi Snap
+    const transaction = await snap.createTransaction(parameter);
+
+    // Step 6: Update status Cart ke Paid
+    const cartIDs = cartItems.map((item) => item.id);
 
 
+    // Step 7: Buat Invoice
+    const invoicePayload = {
+      order_id: transactionDetails.order_id,
+      invoice_number: `INV-${Date.now()}`,
+      due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      invoice_date: new Date().toISOString(),
+      customer_details: {
+        id: user.id,
+        name: user.username,
+        email: user.email,
+        phone: user.mobile,
+      },
+      payment_type: 'payment_link',
+      reference: 'reference',
+      item_details: itemDetails,
+      notes: 'Invoice untuk pembayaran pesanan.',
+      payment_link: {
+        is_custom_expiry: true,
+        expiry: {
+          unit: 'days',
+          duration: 7,
+        },
+        enabled_payments: ['bca_va'],
+      },
+    };
+
+    const invoiceResponse = await axios.post(
+      'https://api.sandbox.midtrans.com/v1/invoices',
+      invoicePayload,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from('SB-Mid-server-pbbyOH2stLH-O3I5OFLpSYqf:').toString('base64')}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+
+    // Step 8: Respons
+    res.status(201).json({
+      message: 'Transaksi berhasil dibuat',
+      transactionToken: transaction.token,
+      redirectUrl: transaction.redirect_url,
+      invoiceLink: invoiceResponse.data.payment_link,
+      invoicePdf: invoiceResponse.data.pdf_url,
+    });
+  } catch (error) {
+    if (error.response) {
+      console.error('Midtrans Error:', error.response.data);
+      res.status(500).json({
+        message: error.response.data.message || 'Terjadi kesalahan di Midtrans.',
+        details: error.response.data,
+      });
+    } else {
+      console.error('Error:', error.message);
+      res.status(500).json({
+        message: error.message || 'Terjadi kesalahan saat membuat transaksi.',
+      });
+    }
+  }
+});
 
 module.exports = {
   addToCart,
@@ -265,4 +393,5 @@ module.exports = {
   getAllCart,
   deleteCart,
   createTransaction,
+  createInvoice
 }
