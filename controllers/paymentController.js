@@ -4,11 +4,11 @@ const Product = require('../models/productModel');
 const Cart = require('../models/cartModel');
 const Image = require('../models/imageModel');
 const Invoice = require('../models/invoiceModel');
-const { Sequelize } = require('sequelize');
-const axios = require('axios'); // Pastikan Anda menginstal axios untuk HTTP request.
+const User = require('../models/userModel');
+const axios = require('axios');
 
 const snap = new midtransClient.Snap({
-  isProduction: false, // Set to true for production
+  isProduction: false,
   serverKey: 'SB-Mid-server-pbbyOH2stLH-O3I5OFLpSYqf',
   clientKey: 'SB-Mid-client-elUlswgTJmEwELW-',
 });
@@ -306,8 +306,9 @@ const createInvoice = asyncHandler(async (req, res) => {
     };
 
     // Step 4: Siapkan parameter untuk Snap
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const transactionDetails = {
-      order_id: `ORDER-${Date.now()}`,
+      order_id: `ORDER-${Date.now()}-${randomSuffix}`,
       gross_amount: grossAmount, // Pastikan ini sesuai dengan total item details
     };
 
@@ -361,6 +362,20 @@ const createInvoice = asyncHandler(async (req, res) => {
       }
     );
 
+    const invoiceData = {
+      id: invoiceResponse.data.id,
+      user_id: user.id,
+      order_id: invoiceResponse.data.order_id,
+      invoice_number: invoiceResponse.data.invoice_number,
+      total: grossAmount,
+      pdf_url: invoiceResponse.data.pdf_url,
+      payment_url: invoiceResponse.data.payment_link,
+      payment_type: invoicePayload.payment_type,
+      status: invoiceResponse.data.status,
+    };
+
+    const createdInvoice = await Invoice.create(invoiceData);
+
     // Step 8: Respons
     res.status(201).json({
       order_id: invoiceResponse.data.order_id,
@@ -394,7 +409,6 @@ const createInvoice = asyncHandler(async (req, res) => {
     }
   }
 });
-
 
 const getInvoice = asyncHandler(async (req, res) => {
   try {
@@ -441,6 +455,31 @@ const getInvoice = asyncHandler(async (req, res) => {
   }
 });
 
+const getAllInvoice = asyncHandler(async (req, res) => {
+
+  try {
+    const invoiceItems = await Invoice.findAll({
+      where: { user_id: req.user.id },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'email', 'mobile'],
+        },
+      ],
+    });    
+
+    res.json({
+      message: 'Berhasil mengambil semua invoice',
+      invoice: invoiceItems,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+});
+
 module.exports = {
   addToCart,
   updateCart,
@@ -449,4 +488,5 @@ module.exports = {
   createTransaction,
   createInvoice,
   getInvoice,
+  getAllInvoice,
 }

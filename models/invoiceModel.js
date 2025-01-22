@@ -1,24 +1,38 @@
 const Sequelize = require("sequelize");
 const db = require('../configs/database');
-const Cart = require('./cartModel');
+const User = require('./userModel');
 
 const Invoice = db.define("Invoice", {
     id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
-        autoIncrement: true,
     },
     user_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
     },
-    cart_id: {
+    order_id: {
+        type: Sequelize.STRING,
+        allowNull: true,
+    },
+    invoice_number: {
+        type: Sequelize.STRING,
+        allowNull: true,
+    },
+    total: {
+        type: Sequelize.STRING,
+        allowNull: true,
+    },
+    pdf_url: {
+        type: Sequelize.TEXT,    
+    },
+    payment_url: {
         type: Sequelize.TEXT,
         allowNull: true,
-    },    
-    quantity: {
-      type: Sequelize.INTEGER,
-      allowNull: true,
+    },
+    payment_type: {
+        type: Sequelize.STRING,
+        allowNull: true,
     },
     status: {
     type: Sequelize.TEXT,    
@@ -32,8 +46,8 @@ const Invoice = db.define("Invoice", {
     freezeTableName: true,
   });
 
-Cart.hasMany(Invoice, { foreignKey: 'cart_id'});
-Invoice.belongsTo(Cart, { foreignKey: 'cart_id' });
+User.hasMany(Invoice, { foreignKey: 'user_id'});
+Invoice.belongsTo(User, { foreignKey: 'user_id' });
 
 module.exports = Invoice;
 
@@ -41,8 +55,8 @@ module.exports = Invoice;
 //     await db.sync()
 //   })
   
-  // Invoice.sync().then((data)=>{
-  // console.log("Table cart success create");
-  // }).catch((err)=>{
-  //   console.log("Table Error when create")
-  // });
+//   Invoice.sync().then((data)=>{
+//   console.log("Table cart success create");
+//   }).catch((err)=>{
+//     console.log("Table Error when create")
+//   });
