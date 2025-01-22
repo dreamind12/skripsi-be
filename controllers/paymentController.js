@@ -288,7 +288,7 @@ const createInvoice = asyncHandler(async (req, res) => {
       price: item.Product.price,
       quantity: item.quantity,
       description: item.Product.name.slice(0, 50),
-      name: item.Product.name.slice(0, 50),
+      name: item.Product.name.slice(0, 50), // Properti name wajib ditambahkan
     }));
 
     const grossAmount = itemDetails.reduce(
@@ -308,7 +308,7 @@ const createInvoice = asyncHandler(async (req, res) => {
     // Step 4: Siapkan parameter untuk Snap
     const transactionDetails = {
       order_id: `ORDER-${Date.now()}`,
-      gross_amount: grossAmount,
+      gross_amount: grossAmount, // Pastikan ini sesuai dengan total item details
     };
 
     const parameter = {
@@ -323,7 +323,6 @@ const createInvoice = asyncHandler(async (req, res) => {
 
     // Step 6: Update status Cart ke Paid
     const cartIDs = cartItems.map((item) => item.id);
-
 
     // Step 7: Buat Invoice
     const invoicePayload = {
@@ -362,14 +361,23 @@ const createInvoice = asyncHandler(async (req, res) => {
       }
     );
 
-
     // Step 8: Respons
     res.status(201).json({
-      message: 'Transaksi berhasil dibuat',
-      transactionToken: transaction.token,
-      redirectUrl: transaction.redirect_url,
-      invoiceLink: invoiceResponse.data.payment_link,
-      invoicePdf: invoiceResponse.data.pdf_url,
+      order_id: invoiceResponse.data.order_id,
+      invoice_number: invoiceResponse.data.invoice_number,
+      published_date: new Date().toISOString(),
+      due_date: invoiceResponse.data.due_date,
+      invoice_date: invoiceResponse.data.invoice_date,
+      reference: invoicePayload.reference,
+      customer_details: invoiceResponse.data.customer_details,
+      item_details: invoiceResponse.data.item_details,
+      id: invoiceResponse.data.id,
+      status: invoiceResponse.data.status,
+      gross_amount: grossAmount,
+      pdf_url: invoiceResponse.data.pdf_url,
+      payment_type: invoicePayload.payment_type,
+      virtual_accounts: [],
+      payment_link_url: invoiceResponse.data.payment_link,
     });
   } catch (error) {
     if (error.response) {
@@ -387,11 +395,58 @@ const createInvoice = asyncHandler(async (req, res) => {
   }
 });
 
+
+const getInvoice = asyncHandler(async (req, res) => {
+  try {
+    // Ambil `invoice_id` dari parameter URL
+    const { invoice_id } = req.params;
+
+    // Periksa apakah `invoice_id` disediakan
+    if (!invoice_id) {
+      res.status(400);
+      throw new Error('Invoice ID harus disertakan.');
+    }
+
+    // Lakukan permintaan ke Midtrans API untuk mendapatkan detail invoice
+    const response = await axios.get(
+      `https://api.sandbox.midtrans.com/v1/invoices/${invoice_id}`,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from('SB-Mid-server-pbbyOH2stLH-O3I5OFLpSYqf:').toString('base64')}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    // Kirim respons dengan data invoice
+    res.status(200).json({
+      message: 'Detail invoice berhasil diambil',
+      invoiceDetails: response.data,
+    });
+  } catch (error) {
+    if (error.response) {
+      // Tampilkan kesalahan dari Midtrans
+      console.error('Midtrans Error:', error.response.data);
+      res.status(500).json({
+        message: error.response.data.message || 'Terjadi kesalahan di Midtrans.',
+        details: error.response.data,
+      });
+    } else {
+      // Tampilkan kesalahan lainnya
+      console.error('Error:', error.message);
+      res.status(500).json({
+        message: error.message || 'Terjadi kesalahan saat mengambil detail invoice.',
+      });
+    }
+  }
+});
+
 module.exports = {
   addToCart,
   updateCart,
   getAllCart,
   deleteCart,
   createTransaction,
-  createInvoice
+  createInvoice,
+  getInvoice,
 }
