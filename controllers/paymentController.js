@@ -284,7 +284,7 @@ const createInvoice = asyncHandler(async (req, res) => {
 
     // Step 2: Siapkan item details dan hitung total harga
     const itemDetails = cartItems.map((item) => ({
-      id: `SKU${item.product_id}`,
+      id: item.product_id,
       price: item.Product.price,
       quantity: item.quantity,
       description: item.Product.name.slice(0, 50),
@@ -324,6 +324,10 @@ const createInvoice = asyncHandler(async (req, res) => {
 
     // Step 6: Update status Cart ke Paid
     const cartIDs = cartItems.map((item) => item.id);
+
+    await Cart.destroy({
+      where: { user_id: req.user.id, status: 'Unpaid' },
+    });
 
     // Step 7: Buat Invoice
     const invoicePayload = {
