@@ -63,7 +63,7 @@ module.exports = Payment;
 })
 
 // Payment.sync().then((data)=>{
-// console.log("Table success create");
+// console.log("Table Payment success create");
 // }).catch((err)=>{
 //   console.log("Table Error when create")
 // });

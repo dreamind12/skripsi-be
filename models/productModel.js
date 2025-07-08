@@ -37,6 +37,12 @@ const Product = db.define("Product", {
 
 module.exports = Product;
 
-// (async () => {
-//   await db.sync()
-// })
+(async () => {
+  await db.sync()
+})
+
+// Product.sync().then((data) => {
+//   console.log("Table product success create");
+// }).catch((err) => {
+//   console.log("Table Error when create")
+// });

@@ -35,3 +35,9 @@ module.exports = Image;
 // (async () => {
 //     await db.sync();
 // })();
+
+// Image.sync().then((data) => {
+//   console.log("Table image success create");
+// }).catch((err) => {
+//   console.log("Table Error when create")
+// });

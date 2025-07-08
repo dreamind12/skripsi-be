@@ -51,9 +51,9 @@ Invoice.belongsTo(User, { foreignKey: 'user_id' });
 
 module.exports = Invoice;
 
-// (async()=>{
-//     await db.sync()
-//   })
+(async()=>{
+    await db.sync()
+  })
   
 //   Invoice.sync().then((data)=>{
 //   console.log("Table cart success create");
